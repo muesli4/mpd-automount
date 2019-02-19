@@ -7,5 +7,5 @@ ExecStart=@MPD_AUTOMOUNT_BINARY@
 Restart=always
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 
