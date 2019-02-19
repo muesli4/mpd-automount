@@ -1,36 +1,35 @@
-usermount - Simple C Automounter
-================================
-
- * Author: Tom Wambold <tom5760@gmail.com>
- * Copyright (c) 2014 Tom Wambold
- * [![Build Status](https://secure.travis-ci.org/tom5760/usermount.png?branch=master)](http://travis-ci.org/tom5760/usermount)
+mpd-automount - An automounter that interacts with MPD
+======================================================
 
 Purpose
 -------
 
-`usermount` is a small C program that interacts with UDisks2 via D-Bus to
-automount removable devices as a normal user.
+`mpd-automount` is a small C program that interacts with UDisks2 via D-Bus to automount removable devices as a normal user and then add them as symbolic links to the MPD library. This linking is done with a bash script that requires `mpc` to selectively update the MPD database.
+
+At the moment the MPD library is fixed at `~/Music`. If someone is interested I will add a configuration file.
 
 Dependencies
 ------------
 
- * udisks2 - Tested with version 2.1.2
+* udisks2
     * http://www.freedesktop.org/wiki/Software/udisks
     * Arch Linux Package: udisks2
 
- * (OPTIONAL) libnotify - Tested with version 0.7.6
-    * http://library.gnome.org/devel/notification-spec/
-    * Arch Linux Package: libnotify
+* mpc
+
 
 Compiling
 ---------
 
-Just type `make`.
-
-If you wish to disable notifications, edit the Makefile to comment the marked
-lines.
+* make
+* make install
 
 Running
 -------
 
-Currently, `usermount` takes no arguments, so just run `usermount`.
+Run `mpd-automount`.
+
+
+Credits
+-------
+This program has been forked from [usermount](https://github.com/tom5760/usermount).
