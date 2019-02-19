@@ -27,17 +27,15 @@
 #include <iostream>
 #include <sstream>
 #include <optional>
-
-#include <cstdio>
-#include <cstring>
+#include <string_view>
 
 #define UDISKS_API_IS_SUBJECT_TO_CHANGE
 #include <udisks/udisks.h>
 
 int generic_link
-    ( char const * const cmd
-    , char const * const label
-    , char const * const uuid
+    ( std::string_view const cmd
+    , std::string_view const label
+    , std::string_view const uuid
     , char const * const mount_path
     )
 {
@@ -46,47 +44,46 @@ int generic_link
 
     if (mount_path != nullptr)
     {
-        ss << " '" << mount_path << '\'' << std::endl;
+        ss << " '" << mount_path << '\'';
     }
 
     return std::system(ss.str().c_str());
 }
 
 int add_link
-    ( char const * const label
-    , char const * const uuid
+    ( std::string_view const label
+    , std::string_view const uuid
     , char const * const mount_path
     )
 {
-    char const * const ADD_CMD = "mpd-automount-link.sh add";
+    constexpr char const * const ADD_CMD = "mpd-automount-link.sh add";
     return generic_link(ADD_CMD, label, uuid, mount_path);
 }
 
 int remove_link
-    ( char const * const label
-    , char const * const uuid
+    ( std::string_view const label
+    , std::string_view const uuid
     )
 {
-    char const * const REMOVE_CMD = "mpd-automount-link.sh remove";
+    constexpr char const * const REMOVE_CMD = "mpd-automount-link.sh remove";
     return generic_link(REMOVE_CMD, label, uuid, nullptr);
 }
 
-static char const BLOCK_DEVICES_PATH [] = "/org/freedesktop/UDisks2/block_devices/";
-static std::size_t const BLOCK_DEVICES_LENGTH = sizeof(BLOCK_DEVICES_PATH) / sizeof(char) - 1;
+static constexpr std::string_view BLOCK_DEVICES_PATH = "/org/freedesktop/UDisks2/block_devices/";
 
 struct filesystem_result
 {
     UDisksFilesystem * filesystem;
-    char const * const label;
-    char const * const uuid;
+    std::string_view const label;
+    std::string_view const uuid;
 };
 
 std::optional<filesystem_result> get_filesystem_from_dbus_object
     ( GDBusObject * dbus_object
-    , char const * const path
+    , std::string_view const path
     )
 {
-    if (strncmp(path, BLOCK_DEVICES_PATH, BLOCK_DEVICES_LENGTH) != 0)
+    if (path.find(BLOCK_DEVICES_PATH) != 0)
     {
         return std::nullopt;
     }
@@ -113,13 +110,13 @@ std::optional<filesystem_result> get_filesystem_from_dbus_object
 
 void log_filesystem_action
     ( char const * const action
-    , char const * const path
+    , std::string_view const path
     , filesystem_result const & result
     )
 {
     std::cout << "udisks2 block device " << action << ": "
               // cut off prefix
-              << (path + BLOCK_DEVICES_LENGTH)
+              << path.substr(BLOCK_DEVICES_PATH.length())
               << " uuid='" << result.uuid << '\''
               << " label='" << result.label << '\''
               << std::endl;
@@ -131,7 +128,7 @@ static void on_object_removed
     , gpointer user_data
     )
 {
-    const char * path = g_dbus_object_get_object_path(dbus_object);
+    std::string_view const path = g_dbus_object_get_object_path(dbus_object);
     auto opt_result = get_filesystem_from_dbus_object(dbus_object, path);
     if (!opt_result.has_value())
     {
@@ -153,7 +150,7 @@ static void on_object_added
     )
 {
 
-    const char * path = g_dbus_object_get_object_path(dbus_object);
+    std::string_view const path = g_dbus_object_get_object_path(dbus_object);
     auto opt_result = get_filesystem_from_dbus_object(dbus_object, path);
     if (!opt_result.has_value())
     {
@@ -196,11 +193,12 @@ static void on_object_added
     g_variant_unref(options);
 }
 
-static void on_interface_added( GDBusObjectManager * manager
-                              , GDBusObject * dbus_object
-                              , GDBusInterface * interface
-                              , gpointer user_data
-                              )
+static void on_interface_added
+    ( GDBusObjectManager * manager
+    , GDBusObject * dbus_object
+    , GDBusInterface * interface
+    , gpointer user_data
+    )
 {
     on_object_added(manager, dbus_object, user_data);
 }
@@ -219,12 +217,12 @@ int main()
         g_main_loop_unref(loop);
         return 1;
     }
-    // TODO link already connected block devices if they aren't yet
+    // TODO link already connected block devices if they are not linked yet
 
     GDBusObjectManager * manager = udisks_client_get_object_manager(client);
-    g_signal_connect(manager, "object-added", G_CALLBACK(on_object_added), NULL);
-    g_signal_connect(manager, "interface-added", G_CALLBACK(on_interface_added), NULL);
-    g_signal_connect(manager, "object-removed", G_CALLBACK(on_object_removed), NULL);
+    g_signal_connect(manager, "object-added", G_CALLBACK(on_object_added), nullptr);
+    g_signal_connect(manager, "interface-added", G_CALLBACK(on_interface_added), nullptr);
+    g_signal_connect(manager, "object-removed", G_CALLBACK(on_object_removed), nullptr);
 
     g_main_loop_run(loop);
 
