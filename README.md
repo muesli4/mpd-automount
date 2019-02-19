@@ -21,13 +21,15 @@ Dependencies
 Compiling
 ---------
 
+* autoreconf -vfi
+* ./configure
 * make
 * make install
 
 Running
 -------
 
-Run `mpd-automount`.
+Either run `mpd-automount` or use `systemctl --user start mpd-automount` (`systemctl --user enable mpd-automount` to always start it).
 
 
 Credits
