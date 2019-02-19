@@ -6,7 +6,12 @@
 #     pick from .music_paths or hidden file music_paths (each will create one link)
 #     pick with user interaction
 
-if [ $# -eq 3 ]; then
+usage() {
+    echo "usage:"
+    echo "    $0 add LABEL UUID MOUNT_POINT | $0 remove LABEL UUID"
+}
+
+if [ $# -ge 3 ]; then
     LABEL="$2"
     UUID="$3"
     if [ -z "$LABEL" ]; then
@@ -36,8 +41,9 @@ if [ $# -eq 3 ]; then
     elif [ "$1" == 'remove' ]; then
 
             rm "$LINK_PATH" && refresh_library 5
+    else
+        usage
     fi
 else
-    echo "usage:"
-    echo "    $0 add LABEL UUID MOUNT_POINT | $0 remove LABEL UUID"
+    usage
 fi

@@ -1,6 +1,6 @@
 # Maintainer: Moritz Bruder <muesli4 at gmail dot com>
 pkgname=mpd-automount-git
-pkgver=r22.e89d5d7
+pkgver=r25.e92e399
 pkgrel=1
 pkgdesc="An udisks2-based automounter that links mountpoints to the MPD music directory"
 arch=('x86_64' 'arm' 'armv6h' 'armv7h' 'aarch64')
