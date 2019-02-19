@@ -143,27 +143,12 @@ static void on_object_removed
     }
 }
 
-static void on_object_added
-    ( GDBusObjectManager * manager
-    , GDBusObject * dbus_object
-    , gpointer user_data
-    )
+static void mount_and_add_filesystem(filesystem_result const & result)
 {
-
-    std::string_view const path = g_dbus_object_get_object_path(dbus_object);
-    auto opt_result = get_filesystem_from_dbus_object(dbus_object, path);
-    if (!opt_result.has_value())
-    {
-        return;
-    }
-    auto & result = opt_result.value();
-    log_filesystem_action("added", path, result);
-
     GVariantBuilder builder;
     g_variant_builder_init(&builder, G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(&builder, "{sv}", "auth.no_user_interaction", g_variant_new_boolean(TRUE));
     // TODO mount read-only?
-
     GVariant * options = g_variant_builder_end (&builder);
     g_variant_ref_sink (options);
 
@@ -193,6 +178,23 @@ static void on_object_added
     g_variant_unref(options);
 }
 
+static void on_object_added
+    ( GDBusObjectManager * manager
+    , GDBusObject * dbus_object
+    , gpointer user_data
+    )
+{
+    std::string_view const path = g_dbus_object_get_object_path(dbus_object);
+    auto opt_result = get_filesystem_from_dbus_object(dbus_object, path);
+    if (opt_result.has_value())
+    {
+        auto & result = opt_result.value();
+        log_filesystem_action("added", path, result);
+
+        mount_and_add_filesystem(result);
+    }
+}
+
 static void on_interface_added
     ( GDBusObjectManager * manager
     , GDBusObject * dbus_object
@@ -217,9 +219,39 @@ int main()
         g_main_loop_unref(loop);
         return 1;
     }
-    // TODO link already connected block devices if they are not linked yet
 
+    // mount all filesystems that are not mounted (otherwise it's most likely system-related)
     GDBusObjectManager * manager = udisks_client_get_object_manager(client);
+
+    {
+        GList * const objects = g_dbus_object_manager_get_objects(manager);
+        GList * current = objects;
+        while (current != nullptr)
+        {
+            GDBusObject * object = G_DBUS_OBJECT(current->data);
+            
+            std::string_view const path = g_dbus_object_get_object_path(object);
+
+            auto opt_result = get_filesystem_from_dbus_object(object, path);
+            if (opt_result.has_value())
+            {
+                auto & result = opt_result.value();
+
+                const gchar * const * mountpoints = udisks_filesystem_get_mount_points(result.filesystem);
+                if (mountpoints != nullptr && *mountpoints == nullptr)
+                {
+                    // found a filesystem that is not mounted
+                    log_filesystem_action("found", path, result);
+                    mount_and_add_filesystem(result);
+                }
+            }
+
+            g_object_unref(current->data);
+            current = g_list_next(current);
+        }
+        g_list_free(objects);
+    }
+
     g_signal_connect(manager, "object-added", G_CALLBACK(on_object_added), nullptr);
     g_signal_connect(manager, "interface-added", G_CALLBACK(on_interface_added), nullptr);
     g_signal_connect(manager, "object-removed", G_CALLBACK(on_object_removed), nullptr);
