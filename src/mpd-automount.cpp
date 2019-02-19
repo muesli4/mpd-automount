@@ -71,7 +71,8 @@ int remove_link
     return generic_link(REMOVE_CMD, label, uuid, nullptr);
 }
 
-static const char BLOCK_DEVICES_PATH [] = "/org/freedesktop/UDisks2/block_devices/";
+static char const BLOCK_DEVICES_PATH [] = "/org/freedesktop/UDisks2/block_devices/";
+static std::size_t const BLOCK_DEVICES_LENGTH = sizeof(BLOCK_DEVICES_PATH) / sizeof(char) - 1;
 
 struct filesystem_result
 {
@@ -85,7 +86,7 @@ std::optional<filesystem_result> get_filesystem_from_dbus_object
     , char const * const path
     )
 {
-    if (strncmp(path, BLOCK_DEVICES_PATH, sizeof(BLOCK_DEVICES_PATH) / sizeof(char) - 1) != 0)
+    if (strncmp(path, BLOCK_DEVICES_PATH, BLOCK_DEVICES_LENGTH) != 0)
     {
         return std::nullopt;
     }
@@ -117,7 +118,8 @@ void log_filesystem_action
     )
 {
     std::cout << "udisks2 block device " << action << ": "
-              << path
+              // cut off prefix
+              << (path + BLOCK_DEVICES_LENGTH)
               << " uuid='" << result.uuid << '\''
               << " label='" << result.label << '\''
               << std::endl;
@@ -170,15 +172,19 @@ static void on_object_added
 
     gchar * mount_path = nullptr;
     GError * error = nullptr;
-    if (!udisks_filesystem_call_mount_sync(
-                result.filesystem, options, &mount_path, nullptr, &error))
+    if (!udisks_filesystem_call_mount_sync
+            ( result.filesystem
+            , options
+            , &mount_path
+            , nullptr, &error
+            ))
     {
-        std::cerr << "udisks2 failed to mount: " << error->message << std::endl;
+        std::cerr << "failed to mount: " << error->message << std::endl;
         g_error_free(error);
     }
     else
     {
-        std::cout << "succesfully mounted at " << mount_path << std::endl;
+        std::cout << "mounted at " << mount_path << std::endl;
 
         if (add_link(result.label, result.uuid, mount_path) != 0)
         {

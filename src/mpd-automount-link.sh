@@ -37,16 +37,19 @@ if [ $# -ge 3 ]; then
                 echo "link already exists, doing nothing"
             else
                 MOUNT_POINT="$4"
-                ln -s "$MOUNT_POINT" "$LINK_PATH" && refresh_library 5
+                ln -s "$MOUNT_POINT" "$LINK_PATH" && refresh_library 5 \
+                    && echo "added $MOUNT_POINT to MPD database"
             fi
         else
             echo "missing mount point argument"
         fi
     elif [ "$1" == 'remove' ]; then
         if [ -h "$LINK_PATH" ]; then
-            rm "$LINK_PATH" && refresh_library 5
+            rm "$LINK_PATH" && refresh_library 5 \
+                && echo "removed $LINK_PATH from MPD database"
         else
             refresh_library 5
+            echo "no link present, refreshing library anyway"
         fi
     else
         usage
