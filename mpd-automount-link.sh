@@ -33,14 +33,21 @@ if [ $# -ge 3 ]; then
 
     if [ "$1" == 'add' ]; then
         if [ $# -eq 4 ]; then
-            MOUNT_POINT="$4"
-            ln -s "$MOUNT_POINT" "$LINK_PATH" && refresh_library 5
+            if [ -h "$LINK_PATH" -a "$(readlink \"$LINK_PATH\")" = "$MOUNT_POINT" ]; then
+                echo "link already exists, doing nothing"
+            else
+                MOUNT_POINT="$4"
+                ln -s "$MOUNT_POINT" "$LINK_PATH" && refresh_library 5
+            fi
         else
             echo "missing mount point argument"
         fi
     elif [ "$1" == 'remove' ]; then
-
+        if [ -h "$LINK_PATH" ]; then
             rm "$LINK_PATH" && refresh_library 5
+        else
+            refresh_library 5
+        fi
     else
         usage
     fi
