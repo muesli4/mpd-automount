@@ -118,8 +118,8 @@ void log_filesystem_action
 {
     std::cout << "udisks2 block device " << action << ": "
               << path
-              << " uuid=" << result.uuid
-              << " label=" << result.label
+              << " uuid='" << result.uuid << '\''
+              << " label='" << result.label << '\''
               << std::endl;
 }
 
@@ -213,6 +213,7 @@ int main()
         g_main_loop_unref(loop);
         return 1;
     }
+    // TODO link already connected block devices if they aren't yet
 
     GDBusObjectManager * manager = udisks_client_get_object_manager(client);
     g_signal_connect(manager, "object-added", G_CALLBACK(on_object_added), NULL);
