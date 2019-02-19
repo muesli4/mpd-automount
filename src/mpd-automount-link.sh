@@ -60,10 +60,13 @@ if [ $# -ge 3 ]; then
 
     if [ "$1" == 'add' ]; then
         if [ $# -eq 4 ]; then
-            if [ -h "$LINK_PATH" -a "$(readlink -m \"$LINK_PATH\")" = "$(readlink -m \"$MOUNT_POINT\")" ]; then
+            MOUNT_POINT="$4"
+            # avoid quote escape quirks
+            A=$(readlink -m "$LINK_PATH")
+            B=$(readlink -m "$MOUNT_POINT")
+            if [ -h "$LINK_PATH" -a "$A" = "$B" ]; then
                 echo "link already exists, doing nothing"
             else
-                MOUNT_POINT="$4"
                 ln -s "$MOUNT_POINT" "$LINK_PATH" && refresh_library 5 \
                     && echo "added $MOUNT_POINT to MPD database"
             fi
