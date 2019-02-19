@@ -58,7 +58,7 @@ int add_link
     , char const * const mount_path
     )
 {
-    char const * const ADD_CMD = "/usr/local/bin/mpd-automount-link.sh add";
+    char const * const ADD_CMD = "mpd-automount-link.sh add";
     return generic_link(ADD_CMD, label, uuid, mount_path);
 }
 
@@ -67,7 +67,7 @@ int remove_link
     , char const * const uuid
     )
 {
-    char const * const REMOVE_CMD = "/usr/local/bin/mpd-automount-link.sh remove";
+    char const * const REMOVE_CMD = "mpd-automount-link.sh remove";
     return generic_link(REMOVE_CMD, label, uuid, nullptr);
 }
 

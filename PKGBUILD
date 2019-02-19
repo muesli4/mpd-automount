@@ -1,6 +1,6 @@
 # Maintainer: Moritz Bruder <muesli4 at gmail dot com>
 pkgname=mpd-automount-git
-pkgver=r23.d297a94
+pkgver=r22.e89d5d7
 pkgrel=1
 pkgdesc="An udisks2-based automounter that links mountpoints to the MPD music directory"
 arch=('x86_64' 'arm' 'armv6h' 'armv7h' 'aarch64')
@@ -13,7 +13,7 @@ provides=("${pkgname%-git}")
 conflicts=("${pkgname%-git}")
 #backup=()
 #options=()
-source=('$pkgname::git://github.com/muesli4/mpd-automount.git')
+source=("${pkgname%-git}::git://github.com/muesli4/mpd-automount.git")
 md5sums=('SKIP')
 
 pkgver() {
@@ -29,5 +29,5 @@ build() {
 
 package() {
 	cd "$srcdir/${pkgname%-git}"
-	make DESTDIR="$pkgdir/" install
+	make PREFIX="/usr" DESTDIR="$pkgdir/" install
 }
