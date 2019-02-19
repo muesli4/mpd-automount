@@ -19,6 +19,7 @@ all: mpd-automount
 install: all
 	install -d "$(DESTDIR)/$(PREFIX)/bin/"
 	install -D mpd-automount mpd-automount-link.sh "$(DESTDIR)/$(PREFIX)/bin/"
+	install -D systemd/mpd-automount.service "/lib/systemd/user/"
 
 clean:
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Mount volumes and integrate them into the MPD library.
+After=mpd.service
+
+[Service]
+ExecStart=/usr/bin/mpd-automount
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
