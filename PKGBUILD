@@ -24,6 +24,8 @@ pkgver() {
 
 build() {
 	cd "$srcdir/${pkgname%-git}"
+	autoreconfi -vfi
+	./configure --prefix=/usr
 	make
 }
 
