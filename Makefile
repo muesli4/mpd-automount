@@ -1,18 +1,12 @@
-# Comment out these two lines (and uncomment the line marked below) to disable
-# notifications
-PKGS=udisks2 libnotify
-CPPFLAGS=-DHAVE_LIBNOTIFY
+PKGS=udisks2
 
-# Uncomment this line to build without notification support
-#PKGS=udisks2
-
-CFLAGS+=$(shell pkg-config --cflags $(PKGS))
+CXXFLAGS+=$(shell pkg-config --cflags $(PKGS)) -std=c++17
 LDLIBS+=$(shell pkg-config --libs $(PKGS))
 
-CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
+CXXFLAGS += -Wall -Wextra -Wno-unused-parameter #-Werror
 
 #CFLAGS += -O0 -g
-CFLAGS += -O3
+CXXFLAGS += -O3
 
 .PHONY: all clean distclean
 
