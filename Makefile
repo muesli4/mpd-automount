@@ -14,6 +14,7 @@ all: mpd-automount
 
 install: all
 	install mpd-automount /usr/bin/mpd-automount
+	install mpd-automount-link.sh /usr/bin/mpd-automount-link.sh
 
 clean:
 
