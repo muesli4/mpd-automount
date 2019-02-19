@@ -10,7 +10,10 @@ CXXFLAGS += -O3
 
 .PHONY: all clean distclean
 
-all: usermount
+all: mpd-automount
+
+install: all
+	install mpd-automount /usr/bin/mpd-automount
 
 clean:
 
