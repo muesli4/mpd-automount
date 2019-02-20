@@ -6,6 +6,8 @@ Purpose
 
 `mpd-automount` is a small C++ program that interacts with UDisks2 via D-Bus to automount removable devices as a normal user and then add them as symbolic links to the MPD library. This linking is done with a bash script that requires `mpc` which selectively updates the MPD database.
 
+`mpd-automount` will mount any unmounted filesystems while starting. For existing links the library will not be refreshed as it is assumed the device was plugged in all the time. (*Links that do not have corresponding device are not removed yet and do not trigger any MPD updates. This will be implemented in the future by keeping track of connected devices across invocations. Context: Removing devices while daemon is not running.*)
+
 Configuration
 -------------
 
