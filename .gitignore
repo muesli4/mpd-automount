@@ -12,3 +12,5 @@ configure
 depcomp
 install-sh
 missing
+src/.deps/
+src/mpd-automount
