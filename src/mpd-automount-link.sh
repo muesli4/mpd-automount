@@ -2,9 +2,11 @@
 # workarround for malfunctioning udisks2 storage plugin
 
 # TODO find a way to pick the directory that gets linked, e.g.:
+#     pick with user interaction
 #     pick <root>/Music
 #     pick from .music_paths or hidden file music_paths (each will create one link)
-#     pick with user interaction
+#         these could also be created on interaction, and in case of ntfs hidden
+#             setfattr -h -v 0x00000002 -n system.ntfs_attrib_be <file>
 
 usage() {
     echo "usage:"

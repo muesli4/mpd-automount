@@ -71,52 +71,53 @@ int remove_link
 
 static constexpr std::string_view BLOCK_DEVICES_PATH = "/org/freedesktop/UDisks2/block_devices/";
 
-struct filesystem_result
+struct filesystem_info
 {
+    std::string_view const dbus_path;
     UDisksFilesystem * filesystem;
     std::string_view const label;
     std::string_view const uuid;
 };
 
-std::optional<filesystem_result> get_filesystem_from_dbus_object
+std::optional<filesystem_info> get_filesystem_info
     ( GDBusObject * dbus_object
-    , std::string_view const path
     )
 {
-    if (path.find(BLOCK_DEVICES_PATH) != 0)
+    std::string_view const dbus_path = g_dbus_object_get_object_path(dbus_object);
+    if (dbus_path.find(BLOCK_DEVICES_PATH) != 0)
     {
         return std::nullopt;
     }
 
-    UDisksObject * object = UDISKS_OBJECT(dbus_object);
+    UDisksObject * udisks_object = UDISKS_OBJECT(dbus_object);
 
-    UDisksBlock * block = udisks_object_peek_block(object);
+    UDisksBlock * block = udisks_object_peek_block(udisks_object);
 
     if (block == nullptr)
     {
         return std::nullopt;
     }
 
-    UDisksFilesystem * filesystem = udisks_object_peek_filesystem(object);
+    UDisksFilesystem * filesystem = udisks_object_peek_filesystem(udisks_object);
     if (filesystem == nullptr)
+    {
         return std::nullopt;
+    }
 
     auto const label = udisks_block_get_id_label(block);
     auto const uuid = udisks_block_get_id_uuid(block);
 
-    return filesystem_result{filesystem, label, uuid};
-
+    return filesystem_info{dbus_path, filesystem, label, uuid};
 }
 
 void log_filesystem_action
     ( char const * const action
-    , std::string_view const path
-    , filesystem_result const & result
+    , filesystem_info const & result
     )
 {
     std::cout << "udisks2 block device " << action << ": "
               // cut off prefix
-              << path.substr(BLOCK_DEVICES_PATH.length())
+              << " device='" << result.dbus_path.substr(BLOCK_DEVICES_PATH.length()) << '\''
               << " uuid='" << result.uuid << '\''
               << " label='" << result.label << '\''
               << std::endl;
@@ -128,14 +129,13 @@ static void on_object_removed
     , gpointer user_data
     )
 {
-    std::string_view const path = g_dbus_object_get_object_path(dbus_object);
-    auto opt_result = get_filesystem_from_dbus_object(dbus_object, path);
+    auto opt_result = get_filesystem_info(dbus_object);
     if (!opt_result.has_value())
     {
         return;
     }
     auto & result = opt_result.value();
-    log_filesystem_action("removed", path, result);
+    log_filesystem_action("removed", result);
 
     if (remove_link(result.label, result.uuid) != 0)
     {
@@ -143,7 +143,7 @@ static void on_object_removed
     }
 }
 
-static void mount_and_add_filesystem(filesystem_result const & result)
+static void mount_and_add_filesystem(filesystem_info const & result)
 {
     GVariantBuilder builder;
     g_variant_builder_init(&builder, G_VARIANT_TYPE_VARDICT);
@@ -158,7 +158,8 @@ static void mount_and_add_filesystem(filesystem_result const & result)
             ( result.filesystem
             , options
             , &mount_path
-            , nullptr, &error
+            , nullptr
+            , &error
             ))
     {
         std::cerr << "failed to mount: " << error->message << std::endl;
@@ -184,12 +185,11 @@ static void on_object_added
     , gpointer user_data
     )
 {
-    std::string_view const path = g_dbus_object_get_object_path(dbus_object);
-    auto opt_result = get_filesystem_from_dbus_object(dbus_object, path);
+    auto opt_result = get_filesystem_info(dbus_object);
     if (opt_result.has_value())
     {
         auto & result = opt_result.value();
-        log_filesystem_action("added", path, result);
+        log_filesystem_action("added", result);
 
         mount_and_add_filesystem(result);
     }
@@ -203,6 +203,34 @@ static void on_interface_added
     )
 {
     on_object_added(manager, dbus_object, user_data);
+}
+
+void mount_unmounted_filesystems(GDBusObjectManager * manager)
+{
+    GList * const objects = g_dbus_object_manager_get_objects(manager);
+    GList * current = objects;
+    while (current != nullptr)
+    {
+        GDBusObject * object = G_DBUS_OBJECT(current->data);
+        
+        auto opt_result = get_filesystem_info(object);
+        if (opt_result.has_value())
+        {
+            auto & result = opt_result.value();
+
+            gchar const * const * mountpoints = udisks_filesystem_get_mount_points(result.filesystem);
+            if (mountpoints != nullptr && *mountpoints == nullptr)
+            {
+                // found a filesystem that is not mounted
+                log_filesystem_action("found", result);
+                mount_and_add_filesystem(result);
+            }
+        }
+
+        g_object_unref(current->data);
+        current = g_list_next(current);
+    }
+    g_list_free(objects);
 }
 
 int main()
@@ -220,45 +248,18 @@ int main()
         return 1;
     }
 
-    // mount all filesystems that are not mounted (otherwise it's most likely system-related)
     GDBusObjectManager * manager = udisks_client_get_object_manager(client);
 
-    {
-        GList * const objects = g_dbus_object_manager_get_objects(manager);
-        GList * current = objects;
-        while (current != nullptr)
-        {
-            GDBusObject * object = G_DBUS_OBJECT(current->data);
-            
-            std::string_view const path = g_dbus_object_get_object_path(object);
+    // mount all filesystems that are not mounted (otherwise it's most likely system-related)
+    mount_unmounted_filesystems(manager);
 
-            auto opt_result = get_filesystem_from_dbus_object(object, path);
-            if (opt_result.has_value())
-            {
-                auto & result = opt_result.value();
-
-                const gchar * const * mountpoints = udisks_filesystem_get_mount_points(result.filesystem);
-                if (mountpoints != nullptr && *mountpoints == nullptr)
-                {
-                    // found a filesystem that is not mounted
-                    log_filesystem_action("found", path, result);
-                    mount_and_add_filesystem(result);
-                }
-            }
-
-            g_object_unref(current->data);
-            current = g_list_next(current);
-        }
-        g_list_free(objects);
-    }
+    // TODO remove links from devices that are no longer attached
 
     g_signal_connect(manager, "object-added", G_CALLBACK(on_object_added), nullptr);
     g_signal_connect(manager, "interface-added", G_CALLBACK(on_interface_added), nullptr);
     g_signal_connect(manager, "object-removed", G_CALLBACK(on_object_removed), nullptr);
 
     g_main_loop_run(loop);
-
-    // TODO safe devices on add and then remove link here ?
 
     g_object_unref(client);
     g_main_loop_unref(loop);
