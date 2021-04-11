@@ -56,7 +56,7 @@ int add_link
     , char const * const mount_path
     )
 {
-    constexpr char const * const ADD_CMD = "mpd-automount-link.sh add";
+    constexpr auto ADD_CMD = "mpd-automount-link.sh add";
     return generic_link(ADD_CMD, label, uuid, mount_path);
 }
 
@@ -65,11 +65,11 @@ int remove_link
     , std::string_view const uuid
     )
 {
-    constexpr char const * const REMOVE_CMD = "mpd-automount-link.sh remove";
+    constexpr auto REMOVE_CMD = "mpd-automount-link.sh remove";
     return generic_link(REMOVE_CMD, label, uuid, nullptr);
 }
 
-static constexpr std::string_view BLOCK_DEVICES_PATH = "/org/freedesktop/UDisks2/block_devices/";
+static constexpr std::string_view BLOCK_DEVICES_PATH{"/org/freedesktop/UDisks2/block_devices/"};
 
 struct filesystem_info
 {
